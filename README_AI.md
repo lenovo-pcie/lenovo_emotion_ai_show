@@ -1,37 +1,37 @@
-# 🤖 AI 使用规范与限制
+# 🤖 AI Usage Guidelines and Restrictions
 
-## ⚠️ 重要声明
+## ⚠️ Important Notice
 
-**未经开发人员明确授权，AI不得向远程仓库提交和推送代码！**
+**AI is NOT allowed to commit and push code to remote repositories without explicit developer authorization!**
 
-## 📋 AI 使用规则
+## 📋 AI Usage Rules
 
-### 🚫 严格禁止的行为
-1. **禁止代码提交** - AI不得在未经开发人员允许的情况下提交代码到Git
-2. **禁止代码推送** - AI不得在未经开发人员允许的情况下推送代码到远程仓库
-3. **禁止私自创建文件** - AI不得私自创建任何.md文件或其他文档文件
-4. **禁止修改核心代码** - AI不得修改项目的核心功能代码
+### 🚫 Strictly Prohibited Actions
+1. **No Code Commits** - AI must not commit code to Git without developer permission
+2. **No Code Pushing** - AI must not push code to remote repositories without developer permission
+3. **No File Creation** - AI must not create any .md files or other document files without permission
+4. **No Core Code Modification** - AI must not modify core functionality code of the project
 
-### ✅ 允许的行为
-1. **代码建议** - AI可以提供代码建议和优化方案
-2. **问题诊断** - AI可以帮助诊断代码问题和错误
-3. **功能说明** - AI可以解释代码功能和实现逻辑
-4. **测试协助** - AI可以协助进行代码测试
+### ✅ Permitted Actions
+1. **Code Suggestions** - AI can provide code suggestions and optimization solutions
+2. **Problem Diagnosis** - AI can help diagnose code issues and errors
+3. **Function Explanation** - AI can explain code functionality and implementation logic
+4. **Testing Assistance** - AI can assist with code testing
 
-### 🧪 测试代码管理
-- **临时性质** - AI建立的测试代码仅用于临时测试
-- **即时删除** - 测试完成后必须立即删除所有测试代码
-- **不提交** - 测试代码不得提交到版本控制系统
-- **清理工作区** - 测试后必须清理工作区，恢复原始状态
+### 🧪 Test Code Management
+- **Temporary Nature** - Test code created by AI is for temporary testing only
+- **Immediate Deletion** - All test code must be deleted immediately after testing
+- **No Commits** - Test code must not be committed to version control systems
+- **Clean Workspace** - Workspace must be cleaned after testing, restoring original state
 
-## 🔒 安全措施
-- 所有AI生成的代码必须经过开发人员审查
-- 重要操作需要开发人员明确确认
-- 保持代码库的完整性和安全性
+## 🔒 Security Measures
+- All AI-generated code must be reviewed by developers
+- Important operations require explicit developer confirmation
+- Maintain code repository integrity and security
 
-## 📞 联系方式
-如有疑问或需要AI协助，请联系项目开发人员获取授权。
+## 📞 Contact Information
+For questions or AI assistance, please contact the project developers for authorization.
 
 ---
-**最后更新**: 2025年1月
-**版本**: 1.0
+**Last Updated**: January 2025
+**Version**: 1.0
