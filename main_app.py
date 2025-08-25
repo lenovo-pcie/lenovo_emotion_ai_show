@@ -3,16 +3,34 @@ import os
 import sys
 
 # Add subdirectories to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'emotion_battery'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'realtime_emotion'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'data_analysis'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'image_processing'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'audio_processing'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'text_analysis'))
 
 # Import submodules
+emotion_battery_available = False
+realtime_emotion_available = False
 data_visualization_available = False
 image_editor_available = False
 audio_processor_available = False
 text_processor_available = False
+
+try:
+    from emotion_battery_interface import create_emotion_battery_interface
+    emotion_battery_available = True
+    print("✅ Emotion battery module imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import emotion battery module: {e}")
+
+try:
+    from realtime_emotion_interface import create_realtime_emotion_interface
+    realtime_emotion_available = True
+    print("✅ Realtime emotion module imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import realtime emotion module: {e}")
 
 try:
     from data_visualization import create_data_visualization_interface
@@ -46,6 +64,48 @@ def create_main_interface():
     """Create main interface with multiple tabs"""
     
     # Create interfaces for each subpage
+    if emotion_battery_available:
+        try:
+            emotion_battery_tab = create_emotion_battery_interface()
+        except Exception as e:
+            print(f"Error creating emotion battery interface: {e}")
+            emotion_battery_tab = gr.Interface(
+                fn=lambda: "Emotion battery module failed to load",
+                inputs=None,
+                outputs="text",
+                title="Emotion Battery",
+                description="Module failed to load, please check code"
+            )
+    else:
+        emotion_battery_tab = gr.Interface(
+            fn=lambda: "Emotion battery module not installed",
+            inputs=None,
+            outputs="text",
+            title="Emotion Battery",
+            description="Please install required dependencies"
+        )
+    
+    if realtime_emotion_available:
+        try:
+            realtime_emotion_tab = create_realtime_emotion_interface()
+        except Exception as e:
+            print(f"Error creating realtime emotion interface: {e}")
+            realtime_emotion_tab = gr.Interface(
+                fn=lambda: "Realtime emotion module failed to load",
+                inputs=None,
+                outputs="text",
+                title="Realtime Emotion",
+                description="Module failed to load, please check code"
+            )
+    else:
+        realtime_emotion_tab = gr.Interface(
+            fn=lambda: "Realtime emotion module not installed",
+            inputs=None,
+            outputs="text",
+            title="Realtime Emotion",
+            description="Please install required dependencies"
+        )
+    
     if data_visualization_available:
         try:
             data_tab = create_data_visualization_interface()
@@ -137,16 +197,10 @@ def create_main_interface():
         
         with gr.Tabs():
             with gr.TabItem("🔋 Emotion Battery", id=0):
-                gr.Markdown("## 🔋 Emotion Battery")
-                gr.Markdown("Emotion Battery Module - Add your emotion battery functionality here...")
-                gr.Markdown("### Hello World! 👋")
-                gr.Markdown("This is a framework for the emotion battery module")
+                emotion_battery_tab.render()
             
             with gr.TabItem("📡 Realtime Emotion", id=1):
-                gr.Markdown("## 📡 Realtime Emotion")
-                gr.Markdown("Real-time Emotion Module - Add your real-time emotion functionality here...")
-                gr.Markdown("### Hello World! 👋")
-                gr.Markdown("This is a framework for the real-time emotion module")
+                realtime_emotion_tab.render()
             
             with gr.TabItem("📊 Data Visualization", id=2):
                 data_tab.render()
@@ -171,14 +225,6 @@ def create_main_interface():
         - `text_analysis/` - Text analysis module
         """)
         
-        gr.Markdown("### 💡 Usage Instructions")
-        gr.Markdown("""
-        1. The first two tabs are emotion-related modules where you can add specific functionality
-        2. Data Visualization: Supports CSV data analysis and multiple chart types
-        3. Image Processing: Supports real-time camera display and various image filter effects
-        4. Audio Processing: Supports audio file processing, analysis, and effects
-        5. Text Analysis: Supports text statistics, sentiment analysis, and word cloud generation
-        """)
     
     return main_interface
 
