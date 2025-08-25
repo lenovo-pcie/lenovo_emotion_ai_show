@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-情绪分析API模块包
-包含各种AI模型的适配器类
+Emotion Analyzer API package
+Includes adapter classes for supported AI models.
 """
 
 __version__ = "1.0.0"
 __author__ = "Emotion Analyzer Team"
 
-# 尝试导入所有可用的分析器类
+# Import only supported analyzers
 try:
-    from .emotion_analyzer_gemini import EmotionAnalyzerGemini
     from .emotion_analyzer_zhipu import EmotionAnalyzerZhipu
-    from .emotion_analyzer_qwen import EmotionAnalyzerQwen
-    from .emotion_analyzer_deepseek import EmotionAnalyzerDeepSeek
-    
+    from .emotion_analyzer_lenovo_qwen32b import EmotionAnalyzerLenovoQwen32b
+
     __all__ = [
-        'EmotionAnalyzerGemini',
-        'EmotionAnalyzerZhipu', 
-        'EmotionAnalyzerQwen',
-        'EmotionAnalyzerDeepSeek'
+        'EmotionAnalyzerZhipu',
+        'EmotionAnalyzerLenovoQwen32b',
     ]
 except ImportError as e:
-    print(f"⚠️ 导入AI模型适配器时出现错误: {e}")
-    print("💡 请确保已安装所需的依赖包")
-    __all__ = [] 
+    print(f"⚠️ Error importing AI model adapters: {e}")
+    print("💡 Please ensure required dependencies are installed")
+    __all__ = []

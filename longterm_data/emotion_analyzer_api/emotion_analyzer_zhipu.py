@@ -11,11 +11,11 @@ from emotion_analyzer_api.screen_content_class_config_loader import load_screen_
 class EmotionAnalyzerZhipu(EmotionAnalyzerBase):
     def __init__(self, api_key, camera_backend=None, camera_index=0):
         super().__init__(api_key, camera_backend, camera_index, "Zhipu")
-        # 加载标准分类提示词
+        # Load standard screen classification prompt
         _, self.screen_class_prompt = load_screen_content_class_config()
     
     def analyze_screen_content(self, screen_image):
-        """分析屏幕截图内容，识别使用的APP和内容分类"""
+        """Analyze screen content and classify app and content"""
         prompt = f"""分析这张屏幕截图，识别应用和内容。
 特别注意：如果是电影电视剧等视频，必须分析出视频画面中的主要人物。
 
@@ -67,7 +67,7 @@ class EmotionAnalyzerZhipu(EmotionAnalyzerBase):
             ]
             
             start_time = time.time()
-            print(f"🖥️ 正在调用Zhipu API分析屏幕内容...")
+            print(f"🖥️ Calling Zhipu API to analyze screen content...")
             
             response = client.chat.completions.create(
                 model="glm-4v-flash",
@@ -87,33 +87,33 @@ class EmotionAnalyzerZhipu(EmotionAnalyzerBase):
                     json_str = json_match.group()
                     try:
                         result_data = json.loads(json_str)
-                        print(f"✅ 屏幕内容分析成功 - 耗时: {api_time:.2f}秒")
-                        print(f"   📱 应用: {result_data.get('app_name', '未知')}")
-                        print(f"   📂 分类: {result_data.get('app_category', '其他')}")
-                        print(f"   📝 描述: {result_data.get('content_description', '无描述')}")
+                        print(f"✅ Screen content analyzed - elapsed: {api_time:.2f}s")
+                        print(f"   📱 App: {result_data.get('app_name', 'Unknown')}")
+                        print(f"   📂 Category: {result_data.get('app_category', 'Other')}")
+                        print(f"   📝 Description: {result_data.get('content_description', 'No description')}")
                         return result_data
                     except json.JSONDecodeError:
-                        print(f"❌ 屏幕内容分析JSON解析失败: {json_str}")
-                        print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                        print(f"❌ Failed to parse screen content JSON: {json_str}")
+                        print(f"⚠️  API call elapsed: {api_time:.2f}s")
                         return self._get_default_screen_result()
                 else:
-                    print(f"❌ 屏幕内容分析未找到JSON格式响应: {content}")
-                    print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                    print(f"❌ Screen content analysis did not return JSON: {content}")
+                    print(f"⚠️  API call elapsed: {api_time:.2f}s")
                     return self._get_default_screen_result()
             else:
-                print("❌ 屏幕内容分析API响应格式异常")
-                print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                print("❌ Screen content API response format error")
+                print(f"⚠️  API call elapsed: {api_time:.2f}s")
                 return self._get_default_screen_result()
                 
         except ImportError:
-            print("❌ 未安装zhipuai库，请运行: pip install zhipuai")
+            print("❌ zhipuai is not installed. Run: pip install zhipuai")
             return self._get_default_screen_result()
         except Exception as e:
-            print(f"❌ 屏幕内容分析失败: {e}")
+            print(f"❌ Screen content analysis failed: {e}")
             return self._get_default_screen_result()
     
     def analyze_emotion(self, images):
-        """使用智谱AI API分析多张图像中的情绪 - 单张分析方式"""
+        """Analyze emotions for multiple images using Zhipu API (per-image analysis)"""
         prompt = """分析这张图片中人物的情绪：
 
 {
@@ -145,7 +145,7 @@ class EmotionAnalyzerZhipu(EmotionAnalyzerBase):
             results = []
             start_time = time.time()
             
-            print(f"🌐 正在调用Zhipu API分析 {len(images)} 张图片...")
+            print(f"🌐 Calling Zhipu API to analyze {len(images)} images...")
             
             for i, image in enumerate(images):
                 # 准备单张图片的base64数据
@@ -187,25 +187,25 @@ class EmotionAnalyzerZhipu(EmotionAnalyzerBase):
                             #     if result_data.get("emotion_level", 0) < 0.3:
                             #         result_data["emotion_level"] = 0.3
                             results.append(result_data)
-                            print(f"✅ 图片 {i+1}/{len(images)} 分析成功")
+                            print(f"✅ Image {i+1}/{len(images)} analyzed successfully")
                         except json.JSONDecodeError:
-                            print(f"❌ 图片 {i+1}/{len(images)} JSON解析失败: {json_str}")
+                            print(f"❌ Image {i+1}/{len(images)} JSON parse failed: {json_str}")
                             results.append(self._get_default_result())
                     else:
-                        print(f"❌ 图片 {i+1}/{len(images)} 未找到JSON格式响应: {content}")
+                        print(f"❌ Image {i+1}/{len(images)} did not return JSON: {content}")
                         results.append(self._get_default_result())
                 else:
-                    print(f"❌ 图片 {i+1}/{len(images)} API响应格式异常")
+                    print(f"❌ Image {i+1}/{len(images)} API response format error")
                     results.append(self._get_default_result())
             
             end_time = time.time()
             api_time = end_time - start_time
-            print(f"✅ 所有图片分析完成 - 总耗时: {api_time:.2f}秒")
+            print(f"✅ All images analyzed - total elapsed: {api_time:.2f}s")
             return results
             
         except ImportError:
-            print("❌ 未安装zhipuai库，请运行: pip install zhipuai")
+            print("❌ zhipuai is not installed. Run: pip install zhipuai")
             return [self._get_default_result() for _ in images]
         except Exception as e:
-            print(f"❌ 智谱AI API调用失败: {e}")
+            print(f"❌ Zhipu API call failed: {e}")
             return [self._get_default_result() for _ in images]

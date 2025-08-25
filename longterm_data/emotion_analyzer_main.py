@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-情绪分析系统主程序test
-支持多种AI模型：Gemini、Zhipu、Qwen、DeepSeek
+Emotion Analysis System - Main Program (test)
+Supported models (current selection trimmed in code): Zhipu (cloud), Lenovo-Qwen32b (remote)
 """
 
 import sys
@@ -10,15 +10,15 @@ import importlib
 import cv2
 
 def select_model():
-    """选择AI模型"""
+    """Select AI model"""
     models = [
-        {"id": "1", "name": "Zhipu", "description": "智谱AI GLM-4V (云端)", "module": "emotion_analyzer_api.emotion_analyzer_zhipu", "class": "EmotionAnalyzerZhipu"},
-        {"id": "2", "name": "Lenovo-Qwen32b", "description": "联想远程服务 (Ollama, qwen2.5vl:32b)", "module": "emotion_analyzer_api.emotion_analyzer_lenovo_qwen32b", "class": "EmotionAnalyzerLenovoQwen32b"}
+        {"id": "1", "name": "Zhipu", "description": "Zhipu GLM-4V (cloud)", "module": "emotion_analyzer_api.emotion_analyzer_zhipu", "class": "EmotionAnalyzerZhipu"},
+        {"id": "2", "name": "Lenovo-Qwen32b", "description": "Lenovo remote service (Ollama, qwen2.5vl:32b)", "module": "emotion_analyzer_api.emotion_analyzer_lenovo_qwen32b", "class": "EmotionAnalyzerLenovoQwen32b"}
     ]
     
-    print("🤖 情绪分析系统 - 模型选择")
+    print("🤖 Emotion Analysis System - Model Selection")
     print("="*50)
-    print("请选择要使用的AI模型：")
+    print("Please choose an AI model:")
     print()
     
     for model in models:
@@ -28,22 +28,22 @@ def select_model():
     
     while True:
         try:
-            choice = input("请输入模型编号 : ").strip()
+            choice = input("Enter model number: ").strip()
             if choice in [model['id'] for model in models]:
                 selected_model = next(model for model in models if model['id'] == choice)
-                print(f"✅ 已选择: {selected_model['name']}")
+                print(f"✅ Selected: {selected_model['name']}")
                 return selected_model
             else:
-                print("❌ 无效选择，请输入一个有效数字")
+                print("❌ Invalid choice, please enter a valid number")
         except KeyboardInterrupt:
-            print("\n🛑 用户取消选择")
+            print("\n🛑 Selection cancelled by user")
             return None
         except ValueError:
-            print("❌ 请输入有效的数字")
+            print("❌ Please enter a valid number")
 
 def get_api_key(model_name):
-    """获取API密钥"""
-    # 默认API密钥
+    """Get API key"""
+    # Default API keys
     default_keys = {
         "Zhipu": "a1e9d780009040fa85bf20b53c810744.7mWfNxsSrKSgMoTD",
         "Lenovo-Qwen32b": "LNV-666d8c88c76a00ed2c2f3128bcbb20f4"
@@ -51,123 +51,114 @@ def get_api_key(model_name):
     
     default_key = default_keys.get(model_name, "")
     
-    print(f"\n🔑 请输入 {model_name} 的API密钥:")
+    print(f"\n🔑 Enter API key for {model_name}:")
     if default_key:
-        print(f"💡 提示：直接回车使用默认密钥，或输入新的密钥")
-        print(f"   默认密钥: {default_key[:10]}...")
+        print(f"💡 Tip: Press Enter to use the default key, or input a new one")
+        print(f"   Default key: {default_key[:10]}...")
     else:
-        print("💡 提示：")
+        print("💡 Tip:")
     
     if model_name == "Zhipu":
-        print("   - 访问 https://open.bigmodel.cn/usercenter/apikeys")
-        print("   - 创建API密钥")
+        print("   - Visit https://open.bigmodel.cn/usercenter/apikeys")
+        print("   - Create an API key")
     elif model_name == "Lenovo-Qwen32b":
-        print("   - 远程Ollama服务已配置")
-        print("   - 服务器地址: 211.93.18.61:33434")
-        print("   - 模型: qwen2.5vl:32b")
-        print("   - API密钥已预设")
+        print("   - Remote Ollama service is configured")
+        print("   - Server: 211.93.18.61:33434")
+        print("   - Model: qwen2.5vl:32b")
+        print("   - API key is preset")
     
     
     while True:
         try:
             if model_name == "Lenovo-Qwen32b":
-                api_key = input("API密钥 (默认已配置): ").strip()
+                api_key = input("API key (press Enter to use preset): ").strip()
                 if not api_key:
                     api_key = "LNV-666d8c88c76a00ed2c2f3128bcbb20f4"
-                    print("✅ 使用预设API密钥")
+                    print("✅ Using preset API key")
             
-            elif model_name == "Ollama-Qwen":
-                api_key = input("Ollama服务地址 (默认: 192.168.1.156): ").strip()
-                if not api_key:
-                    api_key = "192.168.1.156"
-                    print("✅ 使用默认服务器地址: 192.168.1.156")
-            elif model_name == "Ollama-Qwen-32B":
-                api_key = input("Ollama服务地址 (默认: 127.0.0.1): ").strip()
-                if not api_key:
-                    api_key = "127.0.0.1"
-                    print("✅ 使用默认服务器地址: 127.0.0.1")
+            # No other models currently require address prompts
             else:
-                api_key = input("API密钥: ").strip()
+                api_key = input("API key: ").strip()
                 if not api_key and default_key:
                     api_key = default_key
-                    print(f"✅ 使用默认API密钥: {default_key[:10]}...")
+                    print(f"✅ Using default API key: {default_key[:10]}...")
             if api_key:
                 return api_key
             else:
-                print("❌ 输入不能为空")
+                print("❌ Input cannot be empty")
         except KeyboardInterrupt:
-            print("\n🛑 用户取消输入")
+            print("\n🛑 Input cancelled by user")
             return None
 
 def get_interval():
-    """获取捕获间隔"""
-    print(f"\n⏰ 设置捕获间隔:")
+    """Get capture interval"""
+    print(f"\n⏰ Set capture interval:")
     try:
-        interval = float(input("请输入捕获间隔分钟数 (默认1分钟): ") or "1.0")
+        interval = float(input("Enter interval in minutes (default 1.0): ") or "1.0")
         if interval < 0.1:
-            print("⚠️ 间隔时间太短，设置为0.1分钟")
+            print("⚠️ Interval too short, set to 0.1 minutes")
             interval = 0.1
         return interval
     except ValueError:
-        print("⚠️ 使用默认间隔: 1.0分钟")
+        print("⚠️ Using default interval: 1.0 minutes")
         return 1.0
 
 def main():
-    """主函数"""
-    print("😊 情绪分析系统")
+    """Main entry"""
+    print("😊 Emotion Analysis System")
     print("="*50)
     
-    # 只保留视频识别模式
-    print("当前仅支持：视频识别模式 (录制3秒视频)")
+    # Video-only mode
+    print("Currently supports: Video recognition mode (record 3 seconds)")
     recognition_mode = "video"
     
-    # 选择模型
+    # Select model
     selected_model = select_model()
     if selected_model is None:
-        print("❌ 未选择模型，程序退出")
+        print("❌ No model selected, exiting")
         return
     
-    # 获取API密钥
+    # Get API key
     api_key = get_api_key(selected_model['name'])
     if api_key is None:
-        print("❌ 未提供API密钥，程序退出")
+        print("❌ No API key provided, exiting")
         return
     
-    # 导入选中的模型模块
+    # Import selected model module
     try:
         module = importlib.import_module(selected_model['module'])
         analyzer_class = getattr(module, selected_model['class'])
     except ImportError as e:
-        print(f"❌ 导入模型模块失败: {e}")
-        print(f"💡 请确保 {selected_model['module']}.py 文件存在")
+        print(f"❌ Failed to import model module: {e}")
+        print(f"💡 Ensure {selected_model['module']}.py exists")
         return
     except AttributeError as e:
-        print(f"❌ 模型类不存在: {e}")
+        print(f"❌ Model class not found: {e}")
         return
     
     # 使用默认内置摄像头（索引0，自动选择后端）
     # 获取捕获间隔
     interval = get_interval()
     
-    # 创建分析器实例（使用默认摄像头设置）
+    # Create analyzer (using default camera settings)
     try:
         analyzer = analyzer_class(
             api_key=api_key,
             camera_backend=cv2.CAP_ANY,
             camera_index=0
         )
-        print("✅ 分析器初始化成功")
+        print("✅ Analyzer initialized successfully")
     except Exception as e:
-        print(f"❌ 分析器初始化失败: {e}")
+        print(f"❌ Failed to initialize analyzer: {e}")
         return
     
-    # 只运行视频模式
+    # Run video mode only
     try:
         analyzer.run_continuous_video(interval)
     except Exception as e:
-        print(f"❌ 运行过程中出现错误: {e}")
+        print(f"❌ Error during execution: {e}")
     finally:
-        print("\n🏁 情绪分析结束")
+        print("\n🏁 Emotion analysis finished")
 
 if __name__ == "__main__":
     main() 

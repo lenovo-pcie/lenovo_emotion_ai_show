@@ -11,15 +11,15 @@ from emotion_analyzer_api.screen_content_class_config_loader import load_screen_
 class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
     def __init__(self, api_key, camera_backend=0, camera_index=0):
         super().__init__(api_key, camera_backend, camera_index, "Lenovo-Qwen32b")
-        # 远程Ollama服务配置
+        # Remote Ollama service config
         self.base_url = "http://211.93.18.61:33434"
-        self.model_name = "qwen2.5vl:32b"  # 使用qwen2.5vl:32b模型，支持图像分析
-        self.api_key = "LNV-666d8c88c76a00ed2c2f3128bcbb20f4"  # API密钥
-        # 加载标准分类提示词
+        self.model_name = "qwen2.5vl:32b"  # qwen2.5vl:32b supports image analysis
+        self.api_key = "LNV-666d8c88c76a00ed2c2f3128bcbb20f4"  # API key
+        # Load standard screen classification prompt
         _, self.screen_class_prompt = load_screen_content_class_config()
     
     def analyze_screen_content(self, screen_image):
-        """分析屏幕截图内容，识别使用的APP和内容分类"""
+        """Analyze screen content and classify app and content"""
         prompt = (
             "分析这个屏幕截图并识别以下信息。"
             "只返回JSON格式的对象：\n"
@@ -69,7 +69,7 @@ class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
             }
             
             start_time = time.time()
-            print(f"🖥️ 正在调用远程Ollama API分析屏幕内容...")
+            print(f"🖥️ Calling remote Ollama API to analyze screen content...")
             
             response = requests.post(f"{self.base_url}/api/generate", headers=headers, json=request_data, timeout=30)
             end_time = time.time()
@@ -85,47 +85,47 @@ class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
                         json_str = json_match.group()
                         try:
                             result_data = json.loads(json_str)
-                            print(f"✅ 屏幕内容分析成功 - 耗时: {api_time:.2f}秒")
-                            print(f"   📱 应用: {result_data.get('app_name', '未知')}")
-                            print(f"   📂 分类: {result_data.get('app_category', '其他')}")
-                            print(f"   📝 描述: {result_data.get('content_description', '无描述')}")
+                            print(f"✅ Screen content analyzed - elapsed: {api_time:.2f}s")
+                            print(f"   📱 App: {result_data.get('app_name', 'Unknown')}")
+                            print(f"   📂 Category: {result_data.get('app_category', 'Other')}")
+                            print(f"   📝 Description: {result_data.get('content_description', 'No description')}")
                             return result_data
                         except json.JSONDecodeError:
-                            print(f"❌ 屏幕内容分析JSON解析失败: {json_str}")
-                            print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                            print(f"❌ Screen content JSON parse failed: {json_str}")
+                            print(f"⚠️  API call elapsed: {api_time:.2f}s")
                             return self._get_default_screen_result()
                     else:
-                        print(f"❌ 屏幕内容分析未找到JSON格式响应: {response_text}")
-                        print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                        print(f"❌ Screen content analysis did not return JSON: {response_text}")
+                        print(f"⚠️  API call elapsed: {api_time:.2f}s")
                         return self._get_default_screen_result()
                 else:
-                    print("❌ 屏幕内容分析API响应格式异常")
-                    print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                    print("❌ Screen content API response format error")
+                    print(f"⚠️  API call elapsed: {api_time:.2f}s")
                     return self._get_default_screen_result()
             else:
-                print(f"❌ 屏幕内容分析API请求失败，状态码: {response.status_code}")
-                print(f"❌ 错误信息: {response.text}")
-                print(f"⚠️  API调用耗时: {api_time:.2f}秒")
+                print(f"❌ Screen content API request failed, status: {response.status_code}")
+                print(f"❌ Error: {response.text}")
+                print(f"⚠️  API call elapsed: {api_time:.2f}s")
                 return self._get_default_screen_result()
                 
         except requests.exceptions.Timeout:
             end_time = time.time()
             api_time = end_time - start_time
-            print(f"⏰ 屏幕内容分析API请求超时 - 耗时: {api_time:.2f}秒")
+            print(f"⏰ Screen content API request timeout - elapsed: {api_time:.2f}s")
             return self._get_default_screen_result()
         except requests.exceptions.RequestException as e:
             end_time = time.time()
             api_time = end_time - start_time
-            print(f"❌ 屏幕内容分析API请求异常: {e} - 耗时: {api_time:.2f}秒")
+            print(f"❌ Screen content API request error: {e} - elapsed: {api_time:.2f}s")
             return self._get_default_screen_result()
         except Exception as e:
             end_time = time.time()
             api_time = end_time - start_time
-            print(f"❌ 屏幕内容分析过程中出现错误: {e} - 耗时: {api_time:.2f}秒")
+            print(f"❌ Screen content analysis error: {e} - elapsed: {api_time:.2f}s")
             return self._get_default_screen_result()
     
     def analyze_emotion(self, images):
-        """使用远程Ollama API分析多张图像中的情绪"""
+        """Analyze emotions for multiple images using remote Ollama API"""
         prompt = (
             "分析这张图片中人物的情绪。"
             "只返回JSON格式的对象：\n"
@@ -154,10 +154,10 @@ class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
         start_time = time.time()
         
         try:
-            print(f"🌐 正在调用远程Ollama API分析 {len(images)} 张图片...")
+            print(f"🌐 Calling remote Ollama API to analyze {len(images)} images...")
             
             for i, image in enumerate(images):
-                # 准备单张图片的base64数据
+                # Prepare base64 image
                 image_base64 = self.image_to_base64(image)
                 
                 request_data = {
@@ -172,7 +172,7 @@ class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
                     }
                 }
                 
-                # 调试：打印请求数据的前100个字符
+                # Debug: preview first 100 chars of request
                 request_str = json.dumps(request_data, ensure_ascii=False)
                 #print(f"🔍 请求数据预览 (图片 {i+1}): {request_str[:100]}...")
                 
@@ -189,19 +189,19 @@ class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
                             try:
                                 result_data = json.loads(json_str)
                                 results.append(result_data)
-                                print(f"✅ 图片 {i+1}/{len(images)} 分析成功")
+                                print(f"✅ Image {i+1}/{len(images)} analyzed successfully")
                             except json.JSONDecodeError:
-                                print(f"❌ 图片 {i+1}/{len(images)} JSON解析失败: {json_str}")
+                                print(f"❌ Image {i+1}/{len(images)} JSON parse failed: {json_str}")
                                 results.append(self._get_default_result())
                         else:
-                            print(f"❌ 图片 {i+1}/{len(images)} 未找到JSON格式响应: {response_text}")
+                            print(f"❌ Image {i+1}/{len(images)} did not return JSON: {response_text}")
                             results.append(self._get_default_result())
                     else:
-                        print(f"❌ 图片 {i+1}/{len(images)} API响应格式异常")
+                        print(f"❌ Image {i+1}/{len(images)} API response format error")
                         results.append(self._get_default_result())
                 else:
-                    print(f"❌ 图片 {i+1}/{len(images)} API请求失败，状态码: {response.status_code}")
-                    print(f"❌ 错误信息: {response.text}")
+                    print(f"❌ Image {i+1}/{len(images)} API request failed, status: {response.status_code}")
+                    print(f"❌ Error: {response.text}")
                     results.append(self._get_default_result())
                 
                 # 添加延迟避免请求过快
@@ -210,22 +210,22 @@ class EmotionAnalyzerLenovoQwen32b(EmotionAnalyzerBase):
             
             end_time = time.time()
             total_time = end_time - start_time
-            print(f"✅ 所有图片分析完成 - 总耗时: {total_time:.2f}秒")
+            print(f"✅ All images analyzed - total elapsed: {total_time:.2f}s")
             
             return results
             
         except requests.exceptions.Timeout:
             end_time = time.time()
             total_time = end_time - start_time
-            print(f"⏰ API请求超时 - 耗时: {total_time:.2f}秒")
+            print(f"⏰ API request timeout - elapsed: {total_time:.2f}s")
             return [self._get_default_result() for _ in images]
         except requests.exceptions.RequestException as e:
             end_time = time.time()
             total_time = end_time - start_time
-            print(f"❌ API请求异常: {e} - 耗时: {total_time:.2f}秒")
+            print(f"❌ API request error: {e} - elapsed: {total_time:.2f}s")
             return [self._get_default_result() for _ in images]
         except Exception as e:
             end_time = time.time()
             total_time = end_time - start_time
-            print(f"❌ 分析过程中出现错误: {e} - 耗时: {total_time:.2f}秒")
+            print(f"❌ Error during analysis: {e} - elapsed: {total_time:.2f}s")
             return [self._get_default_result() for _ in images] 
