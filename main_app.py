@@ -3,12 +3,12 @@ import os
 import sys
 
 # Add subdirectories to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'emotion_battery'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'realtime_emotion'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'data_analysis'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'image_processing'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'audio_processing'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'text_analysis'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_emotion_battery'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_realtime_emotion'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_data_analysis'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_image_processing'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_audio_processing'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_text_analysis'))
 
 # Import submodules
 emotion_battery_available = False
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     app = create_main_interface()
     app.launch(
         server_name="127.0.0.1",
-        server_port=7861,  # Use port 7861
+        server_port=7860,  # Use port 7861
         share=False,
         show_error=True,
         quiet=False
