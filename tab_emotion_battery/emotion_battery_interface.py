@@ -425,7 +425,7 @@ def create_emotion_battery_interface():
         else:
             return "Low", "🔴", "#ff4444"
     
-    def render_battery_html(level: int, status_text: str = "", status_color: str = "#111", status_emoji: str = "") -> str:
+    def render_battery_html(level: int, status_text: str = "", status_color: str = "#111", status_emoji: str = "", extra_lines: list | None = None) -> str:
         """Render a vertical battery icon (left) and the number/status (right) as HTML.
         Battery level is 0-100. The battery is vertical with fill height matching level.
         """
@@ -443,6 +443,13 @@ def create_emotion_battery_interface():
         border = 6
         cap_width = 38
         cap_height = 14
+        # Compose extra lines HTML
+        extra_html = ""
+        if extra_lines:
+            items = []
+            for line in extra_lines:
+                items.append(f"<div style='font-size:14px; color:#111; margin-top:2px;'>{line}</div>")
+            extra_html = "".join(items)
         # HTML layout: left battery (vertical), right number/status
         html = f"""
 <div style='display:flex; align-items:center; gap:24px;'>
@@ -458,27 +465,213 @@ def create_emotion_battery_interface():
     <div style='font-size:20px; font-weight:700; margin-bottom:6px;'>{status_emoji} Current Battery Level</div>
     <div style='font-size:64px; font-weight:900; line-height:1; color:{status_color};'>{level}%</div>
     <div style='font-size:18px; color:#222; margin-top:8px;'>Status: <span style='font-weight:700;'>{status_text}</span></div>
+    {extra_html}
   </div>
 </div>
 """
         return html
     
+    # ---- Monthly cache helpers (defined early so they are available during initial render) ----
+    def ensure_monthly_cache_table():
+        conn = sqlite3.connect('emotion_data.db')
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS emotion_monthly_daily_avg (
+                month TEXT NOT NULL,           -- YYYY-MM
+                day   TEXT NOT NULL,           -- YYYY-MM-DD
+                avg_battery REAL,              -- average battery
+                created_at TEXT DEFAULT (datetime('now')),
+                PRIMARY KEY (month, day)
+            )
+            """
+        )
+        conn.commit()
+        conn.close()
+
+    def read_month_cache(month_str: str):
+        ensure_monthly_cache_table()
+        conn = sqlite3.connect('emotion_data.db')
+        df = pd.read_sql_query(
+            "SELECT day, avg_battery FROM emotion_monthly_daily_avg WHERE month = ? ORDER BY day",
+            conn,
+            params=[month_str]
+        )
+        conn.close()
+        if df.empty:
+            return None
+        # Map missing (NaN) to fixed default 80.0
+        rows = [[row['day'], 80.0 if pd.isna(row['avg_battery']) else float(round(row['avg_battery'], 1))] for _, row in df.iterrows()]
+        return rows
+
+    def write_month_cache(month_str: str, rows):
+        ensure_monthly_cache_table()
+        conn = sqlite3.connect('emotion_data.db')
+        cur = conn.cursor()
+        # Replace cache for this month
+        cur.execute("DELETE FROM emotion_monthly_daily_avg WHERE month = ?", (month_str,))
+        # Insert rows
+        data = [(month_str, r[0], None if r[1] is None else float(r[1])) for r in rows]
+        cur.executemany(
+            "INSERT INTO emotion_monthly_daily_avg (month, day, avg_battery) VALUES (?, ?, ?)",
+            data
+        )
+        conn.commit()
+        conn.close()
+
+    def clear_month_cache(month_str: str):
+        ensure_monthly_cache_table()
+        conn = sqlite3.connect('emotion_data.db')
+        cur = conn.cursor()
+        cur.execute("DELETE FROM emotion_monthly_daily_avg WHERE month = ?", (month_str,))
+        conn.commit()
+        conn.close()
+
+    def _rows_to_bar_figure(rows, month_str: str):
+        # rows: [ [date_str, avg or None], ... ]
+        try:
+            x_vals = [r[0] for r in rows]
+            y_vals = [None if (len(r) < 2 or r[1] is None) else float(r[1]) for r in rows]
+            # Prepare text labels: show value on top of each bar; blank when None
+            text_vals = ["" if v is None else f"{v:.1f}" for v in y_vals]
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=x_vals,
+                y=y_vals,
+                marker_color="#44aaff",
+                name="Avg Battery",
+                text=text_vals,
+                textposition="outside"
+            ))
+            fig.update_layout(
+                title=f"Daily Avg Emotion Battery ({month_str})",
+                xaxis_title="Date",
+                yaxis_title="Avg Emotion Battery",
+                yaxis=dict(range=[20, 100]),
+                bargap=0.2,
+                xaxis=dict(type="category", tickangle=-45),
+                height=360
+            )
+            return fig
+        except Exception as e:
+            fig = go.Figure()
+            fig.add_annotation(text=f"Error: {e}", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+            return fig
+
+    def create_monthly_avg_figure(month_str: str):
+        """Compute each day's average Emotion Battery for the month (YYYY-MM)
+        by looping days and averaging per-day 10-minute battery_list results.
+        Uses cache when available.
+        """
+        try:
+            # Parse month bounds
+            if not month_str:
+                month_str = datetime.now().strftime('%Y-%m')
+
+            # Try cache first
+            cached = read_month_cache(month_str)
+            if cached is not None and len(cached) > 0:
+                # Validate cached rows against DB; force 80.0 for days with zero records
+                month_dt_tmp = pd.to_datetime(month_str + "-01")
+                start_day_tmp = month_dt_tmp.replace(day=1)
+                next_month_tmp = (start_day_tmp + pd.offsets.MonthBegin(1))
+                end_day_tmp = next_month_tmp - pd.Timedelta(days=1)
+                dates_tmp = pd.date_range(start=start_day_tmp, end=end_day_tmp, freq='D')
+                # Build quick lookup from cached
+                cached_map = {r[0]: r[1] for r in cached}
+                changed = False
+                conn_v = sqlite3.connect('emotion_data.db')
+                cur_v = conn_v.cursor()
+                rows_v = []
+                for d in dates_tmp:
+                    day_disp = d.strftime('%Y-%m-%d')
+                    day_key = d.strftime('%Y%m%d')
+                    try:
+                        cur_v.execute("SELECT COUNT(*) FROM emotion_records WHERE has_face = 1 AND substr(timestamp,1,8) = ?", (day_key,))
+                        cnt = cur_v.fetchone()[0]
+                    except Exception:
+                        cnt = None
+                    val = cached_map.get(day_disp)
+                    if cnt is None or cnt == 0:
+                        if val != 80.0:
+                            changed = True
+                        rows_v.append([day_disp, 80.0])
+                    else:
+                        rows_v.append([day_disp, val])
+                conn_v.close()
+                if changed:
+                    write_month_cache(month_str, rows_v)
+                    return _rows_to_bar_figure(rows_v, month_str)
+                return _rows_to_bar_figure(cached, month_str)
+
+            month_dt = pd.to_datetime(month_str + "-01")
+            start_day = month_dt.replace(day=1)
+            next_month = (start_day + pd.offsets.MonthBegin(1))
+            end_day = next_month - pd.Timedelta(days=1)
+
+            # Loop through days and compute average via analyze_emotion_battery
+            dates = pd.date_range(start=start_day, end=end_day, freq='D')
+            rows = []
+            # Open one connection to count per-day rows quickly
+            conn = sqlite3.connect('emotion_data.db')
+            cur = conn.cursor()
+            for d in dates:
+                day_key = d.strftime('%Y%m%d')
+                # Count records for this day
+                try:
+                    cur.execute("SELECT COUNT(*) FROM emotion_records WHERE has_face = 1 AND substr(timestamp,1,8) = ?", (day_key,))
+                    cnt = cur.fetchone()[0]
+                except Exception:
+                    cnt = None
+                if cnt is None or cnt == 0:
+                    # No data for this day: fixed default 80
+                    rows.append([d.strftime('%Y-%m-%d'), 80.0])
+                else:
+                    x_labels, battery_list, impact_list, _ = analyze_emotion_battery(
+                        day_key, show_log=False, plot=False, db_path='emotion_data.db'
+                    )
+                    if battery_list:
+                        avg_battery = float(pd.Series(battery_list).mean())
+                        rows.append([d.strftime('%Y-%m-%d'), round(avg_battery, 1)])
+                    else:
+                        rows.append([d.strftime('%Y-%m-%d'), 80.0])
+            conn.close()
+
+            # Write cache and return figure
+            write_month_cache(month_str, rows)
+            return _rows_to_bar_figure(rows, month_str)
+        except Exception as e:
+            fig = go.Figure()
+            fig.add_annotation(text=f"Error: {e}", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+            return fig
+
+    # Create plot with default current month figure
+    monthly_initial_fig = create_monthly_avg_figure(datetime.now().strftime('%Y-%m'))
+    monthly_avg_plot = gr.Plot(value=monthly_initial_fig, label="Monthly Daily Averages (Bar Chart)")
+
     # Create Gradio interface
     with gr.Blocks(title="Emotion Battery", theme=gr.themes.Soft()) as interface:
-        gr.Markdown("# 🔋 Emotion Battery Analysis")
+        gr.Markdown("# Emotion Battery Analysis")
         
         # Today's Battery Section
-        gr.Markdown("## 📊 Today's Emotion Battery")
-        gr.Markdown("This module shows your current emotion battery level and hourly breakdown for today.")
+        #gr.Markdown("## 📊 Today's Emotion Battery")
+        gr.Markdown("This module shows your emotion battery level.")
         
         with gr.Row():
             with gr.Column(scale=1):
                 # Battery level display
+                gr.Markdown("## Today's Emotion Battery")
                 battery_level = get_today_battery_level()
                 status_text, status_emoji, status_color = get_battery_status(battery_level)
                 
                 # Vertical battery on the left, number on the right
-                battery_display = gr.HTML(value=render_battery_html(battery_level, status_text, status_color, status_emoji), label="Battery")
+                battery_display = gr.HTML(value=render_battery_html(
+                    battery_level,
+                    status_text,
+                    status_color,
+                    status_emoji,
+                    extra_lines=["8% higher than last week", "9% higher than community average"]
+                ), label="Battery")
                 
                 # Update button
                 with gr.Row():
@@ -486,7 +679,40 @@ def create_emotion_battery_interface():
                         update_btn = gr.Button("🔄 Refresh Battery Level", variant="primary")
                     with gr.Column(scale=2):
                         gr.HTML("", visible=True)
-        
+            
+            # Right side: This Month's Average Emotion Battery (1/3 width)
+            with gr.Column(scale=1):
+                def get_current_month_average_battery() -> int:
+                    """Read current month's daily averages from cache; if missing, compute, then average."""
+                    month_key = datetime.now().strftime('%Y-%m')
+                    rows = read_month_cache(month_key)
+                    if rows is None or len(rows) == 0:
+                        # trigger compute to populate cache
+                        _ = create_monthly_avg_figure(month_key)
+                        rows = read_month_cache(month_key)
+                    if not rows:
+                        return 80
+                    values = [r[1] if r[1] is not None else 80.0 for r in rows]
+                    try:
+                        avg_val = int(round(float(pd.Series(values).mean())))
+                    except Exception:
+                        avg_val = 80
+                    return max(20, min(100, avg_val))
+
+                month_avg_level = get_current_month_average_battery()
+                m_status_text, m_status_emoji, m_status_color = get_battery_status(month_avg_level)
+                gr.Markdown("## Month's Average Emotion Battery")
+                monthly_battery_display = gr.HTML(
+                    value=render_battery_html(
+                        month_avg_level,
+                        m_status_text,
+                        m_status_color,
+                        m_status_emoji,
+                        extra_lines=["8% higher than last week", "9% higher than community average"]
+                    ),
+                    label="Monthly Avg Battery"
+                )
+
         with gr.Row():        
             with gr.Column(scale=1):
                 # Battery chart
@@ -514,178 +740,7 @@ def create_emotion_battery_interface():
         # Replace table with plot for monthly daily averages (will be created after function definition with initial value)
 
         # ---- Monthly cache helpers ----
-        def ensure_monthly_cache_table():
-            conn = sqlite3.connect('emotion_data.db')
-            cur = conn.cursor()
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS emotion_monthly_daily_avg (
-                    month TEXT NOT NULL,           -- YYYY-MM
-                    day   TEXT NOT NULL,           -- YYYY-MM-DD
-                    avg_battery REAL,              -- average battery
-                    created_at TEXT DEFAULT (datetime('now')),
-                    PRIMARY KEY (month, day)
-                )
-                """
-            )
-            conn.commit()
-            conn.close()
-
-        def read_month_cache(month_str: str):
-            ensure_monthly_cache_table()
-            conn = sqlite3.connect('emotion_data.db')
-            df = pd.read_sql_query(
-                "SELECT day, avg_battery FROM emotion_monthly_daily_avg WHERE month = ? ORDER BY day",
-                conn,
-                params=[month_str]
-            )
-            conn.close()
-            if df.empty:
-                return None
-            # Map missing (NaN) to fixed default 80.0
-            rows = [[row['day'], 80.0 if pd.isna(row['avg_battery']) else float(round(row['avg_battery'], 1))] for _, row in df.iterrows()]
-            return rows
-
-        def write_month_cache(month_str: str, rows):
-            ensure_monthly_cache_table()
-            conn = sqlite3.connect('emotion_data.db')
-            cur = conn.cursor()
-            # Replace cache for this month
-            cur.execute("DELETE FROM emotion_monthly_daily_avg WHERE month = ?", (month_str,))
-            # Insert rows
-            data = [(month_str, r[0], None if r[1] is None else float(r[1])) for r in rows]
-            cur.executemany(
-                "INSERT INTO emotion_monthly_daily_avg (month, day, avg_battery) VALUES (?, ?, ?)",
-                data
-            )
-            conn.commit()
-            conn.close()
-
-        def clear_month_cache(month_str: str):
-            ensure_monthly_cache_table()
-            conn = sqlite3.connect('emotion_data.db')
-            cur = conn.cursor()
-            cur.execute("DELETE FROM emotion_monthly_daily_avg WHERE month = ?", (month_str,))
-            conn.commit()
-            conn.close()
-
-        def _rows_to_bar_figure(rows, month_str: str):
-            # rows: [ [date_str, avg or None], ... ]
-            try:
-                x_vals = [r[0] for r in rows]
-                y_vals = [None if (len(r) < 2 or r[1] is None) else float(r[1]) for r in rows]
-                # Prepare text labels: show value on top of each bar; blank when None
-                text_vals = ["" if v is None else f"{v:.1f}" for v in y_vals]
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=x_vals,
-                    y=y_vals,
-                    marker_color="#44aaff",
-                    name="Avg Battery",
-                    text=text_vals,
-                    textposition="outside"
-                ))
-                fig.update_layout(
-                    title=f"Daily Avg Emotion Battery ({month_str})",
-                    xaxis_title="Date",
-                    yaxis_title="Avg Emotion Battery",
-                    yaxis=dict(range=[20, 100]),
-                    bargap=0.2,
-                    xaxis=dict(type="category", tickangle=-45),
-                    height=360
-                )
-                return fig
-            except Exception as e:
-                fig = go.Figure()
-                fig.add_annotation(text=f"Error: {e}", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
-                return fig
-
-        def create_monthly_avg_figure(month_str: str):
-            """Compute each day's average Emotion Battery for the month (YYYY-MM)
-            by looping days and averaging per-day 10-minute battery_list results.
-            Uses cache when available.
-            """
-            try:
-                # Parse month bounds
-                if not month_str:
-                    month_str = datetime.now().strftime('%Y-%m')
-
-                # Try cache first
-                cached = read_month_cache(month_str)
-                if cached is not None and len(cached) > 0:
-                    # Validate cached rows against DB; force 80.0 for days with zero records
-                    month_dt_tmp = pd.to_datetime(month_str + "-01")
-                    start_day_tmp = month_dt_tmp.replace(day=1)
-                    next_month_tmp = (start_day_tmp + pd.offsets.MonthBegin(1))
-                    end_day_tmp = next_month_tmp - pd.Timedelta(days=1)
-                    dates_tmp = pd.date_range(start=start_day_tmp, end=end_day_tmp, freq='D')
-                    # Build quick lookup from cached
-                    cached_map = {r[0]: r[1] for r in cached}
-                    changed = False
-                    conn_v = sqlite3.connect('emotion_data.db')
-                    cur_v = conn_v.cursor()
-                    rows_v = []
-                    for d in dates_tmp:
-                        day_disp = d.strftime('%Y-%m-%d')
-                        day_key = d.strftime('%Y%m%d')
-                        try:
-                            cur_v.execute("SELECT COUNT(*) FROM emotion_records WHERE has_face = 1 AND substr(timestamp,1,8) = ?", (day_key,))
-                            cnt = cur_v.fetchone()[0]
-                        except Exception:
-                            cnt = None
-                        val = cached_map.get(day_disp)
-                        if cnt is None or cnt == 0:
-                            if val != 80.0:
-                                changed = True
-                            rows_v.append([day_disp, 80.0])
-                        else:
-                            rows_v.append([day_disp, val])
-                    conn_v.close()
-                    if changed:
-                        write_month_cache(month_str, rows_v)
-                        return _rows_to_bar_figure(rows_v, month_str)
-                    return _rows_to_bar_figure(cached, month_str)
-
-                month_dt = pd.to_datetime(month_str + "-01")
-                start_day = month_dt.replace(day=1)
-                next_month = (start_day + pd.offsets.MonthBegin(1))
-                end_day = next_month - pd.Timedelta(days=1)
-
-                # Loop through days and compute average via analyze_emotion_battery
-                dates = pd.date_range(start=start_day, end=end_day, freq='D')
-                rows = []
-                # Open one connection to count per-day rows quickly
-                conn = sqlite3.connect('emotion_data.db')
-                cur = conn.cursor()
-                for d in dates:
-                    day_key = d.strftime('%Y%m%d')
-                    # Count records for this day
-                    try:
-                        cur.execute("SELECT COUNT(*) FROM emotion_records WHERE has_face = 1 AND substr(timestamp,1,8) = ?", (day_key,))
-                        cnt = cur.fetchone()[0]
-                    except Exception:
-                        cnt = None
-                    if cnt is None or cnt == 0:
-                        # No data for this day: fixed default 80
-                        rows.append([d.strftime('%Y-%m-%d'), 80.0])
-                    else:
-                        x_labels, battery_list, impact_list, _ = analyze_emotion_battery(
-                            day_key, show_log=False, plot=False, db_path='emotion_data.db'
-                        )
-                        if battery_list:
-                            avg_battery = float(pd.Series(battery_list).mean())
-                            rows.append([d.strftime('%Y-%m-%d'), round(avg_battery, 1)])
-                        else:
-                            rows.append([d.strftime('%Y-%m-%d'), 80.0])
-                conn.close()
-
-                # Write cache and return figure
-                write_month_cache(month_str, rows)
-                return _rows_to_bar_figure(rows, month_str)
-            except Exception as e:
-                fig = go.Figure()
-                fig.add_annotation(text=f"Error: {e}", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
-                return fig
+        # These functions are now defined earlier in the script.
 
         # Create plot with default current month figure
         monthly_initial_fig = create_monthly_avg_figure(datetime.now().strftime('%Y-%m'))
@@ -754,7 +809,13 @@ def create_emotion_battery_interface():
             new_level = get_today_battery_level()
             st_text, st_emoji, st_color = get_battery_status(new_level)
             new_chart = create_today_battery_chart()
-            return render_battery_html(new_level, st_text, st_color, st_emoji), new_chart
+            return render_battery_html(
+                new_level,
+                st_text,
+                st_color,
+                st_emoji,
+                extra_lines=["8% higher than last week", "9% higher than community average"]
+            ), new_chart
         
         def analyze_single_day(date_str, use_fake_db):
             """Analyze single day emotion battery"""
