@@ -425,6 +425,44 @@ def create_emotion_battery_interface():
         else:
             return "Low", "🔴", "#ff4444"
     
+    def render_battery_html(level: int, status_text: str = "", status_color: str = "#111", status_emoji: str = "") -> str:
+        """Render a vertical battery icon (left) and the number/status (right) as HTML.
+        Battery level is 0-100. The battery is vertical with fill height matching level.
+        """
+        level = max(0, min(100, int(level)))
+        # Color by level
+        if level <= 20:
+            fill_color = "#ff4444"
+        elif level <= 50:
+            fill_color = "#ffaa00"
+        else:
+            fill_color = "#44ff44"
+        # Sizes
+        case_width = 90
+        case_height = 220
+        border = 6
+        cap_width = 38
+        cap_height = 14
+        # HTML layout: left battery (vertical), right number/status
+        html = f"""
+<div style='display:flex; align-items:center; gap:24px;'>
+  <!-- Vertical Battery -->
+  <div style='display:flex; flex-direction:column; align-items:center;'>
+    <div style='width:{cap_width}px; height:{cap_height}px; background:#333; border-radius:4px 4px 0 0;'></div>
+    <div style='position:relative; width:{case_width}px; height:{case_height}px; border:{border}px solid #333; border-radius:16px; box-sizing:border-box; overflow:hidden; background:#f8f8f8;'>
+      <div style='position:absolute; bottom:0; left:0; width:100%; height:{level}%; background:{fill_color}; transition:height 300ms ease;'></div>
+    </div>
+  </div>
+  <!-- Number and Status -->
+  <div style='display:flex; flex-direction:column; justify-content:center;'>
+    <div style='font-size:20px; font-weight:700; margin-bottom:6px;'>{status_emoji} Current Battery Level</div>
+    <div style='font-size:64px; font-weight:900; line-height:1; color:{status_color};'>{level}%</div>
+    <div style='font-size:18px; color:#222; margin-top:8px;'>Status: <span style='font-weight:700;'>{status_text}</span></div>
+  </div>
+</div>
+"""
+        return html
+    
     # Create Gradio interface
     with gr.Blocks(title="Emotion Battery", theme=gr.themes.Soft()) as interface:
         gr.Markdown("# 🔋 Emotion Battery Analysis")
@@ -439,9 +477,8 @@ def create_emotion_battery_interface():
                 battery_level = get_today_battery_level()
                 status_text, status_emoji, status_color = get_battery_status(battery_level)
                 
-                gr.Markdown(f"### {status_emoji} Current Battery Level")
-                gr.Markdown(f"## <span style='color: {status_color}; font-size: 48px; font-weight: bold;'>{battery_level}%</span>")
-                gr.Markdown(f"**Status:** {status_text}")
+                # Vertical battery on the left, number on the right
+                battery_display = gr.HTML(value=render_battery_html(battery_level, status_text, status_color, status_emoji), label="Battery")
                 
                 # Update button
                 update_btn = gr.Button("🔄 Refresh Battery Level", variant="primary")
@@ -504,8 +541,9 @@ def create_emotion_battery_interface():
         def update_battery():
             """Update battery level and chart"""
             new_level = get_today_battery_level()
+            st_text, st_emoji, st_color = get_battery_status(new_level)
             new_chart = create_today_battery_chart()
-            return str(new_level), new_chart
+            return render_battery_html(new_level, st_text, st_color, st_emoji), new_chart
         
         def analyze_single_day(date_str, use_fake_db):
             """Analyze single day emotion battery"""
@@ -513,7 +551,7 @@ def create_emotion_battery_interface():
         
         update_btn.click(
             fn=update_battery,
-            outputs=[gr.Textbox(value=str(get_today_battery_level())), chart_output]
+            outputs=[battery_display, chart_output]
         )
         
         analyze_btn.click(
@@ -521,7 +559,7 @@ def create_emotion_battery_interface():
             inputs=[date_input, fake_db_checkbox],
             outputs=single_day_chart
         )
-    
+        
     return interface
 
 if __name__ == "__main__":
