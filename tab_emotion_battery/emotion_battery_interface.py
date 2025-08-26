@@ -43,7 +43,7 @@ def create_emotion_battery_interface():
     
     # Battery analysis parameters
     startV = 90    # Starting battery level: 90%
-    endV = 60      # Ending battery level: 60%
+    endV = 70      # Ending battery level: 70%
     timeS = "08:00"  # Start time: 08:00
     timeE = "17:59"  # End time: 17:59
     timeP = 10       # Time period in minutes
@@ -834,117 +834,7 @@ def create_emotion_battery_interface():
         
         gr.Markdown("---")
         
-        # Debug: Per-day aggregation details (counts/ratios/impact)
-        gr.Markdown("## 🧪 Debug: Day Aggregation Details")
-        with gr.Row():
-            with gr.Column(scale=1):
-                debug_day_input = gr.Textbox(
-                    label="Date (YYYY-MM-DD or YYYYMMDD)",
-                    value=datetime.now().strftime('%Y-%m-%d'),
-                    placeholder="e.g., 2025-07-17"
-                )
-                debug_btn = gr.Button("🔎 Show Details", variant="secondary")
-            with gr.Column(scale=2):
-                gr.HTML("", visible=True)
-        debug_table = gr.Dataframe(
-            headers=["emotion", "count", "ratio", "weight", "contrib"],
-            datatype=["str", "number", "number", "number", "number"],
-            label="Per-Emotion Aggregation"
-        )
-        debug_summary = gr.Markdown()
-
-        def show_day_aggregation_details(date_str: str):
-            try:
-                # Parse date to yyyymmdd
-                if not date_str:
-                    return [], "Please input a date"
-                if isinstance(date_str, str):
-                    if '-' in date_str:
-                        dt = pd.to_datetime(date_str)
-                    else:
-                        dt = pd.to_datetime(date_str, format='%Y%m%d')
-                else:
-                    dt = pd.to_datetime(date_str)
-                day_key = dt.strftime('%Y%m%d')
-
-                # Query records
-                conn = sqlite3.connect('emotion_data.db')
-                sql = """
-                    SELECT emotion FROM emotion_records
-                    WHERE substr(timestamp,1,8) = ? AND has_face = 1
-                """
-                df = pd.read_sql_query(sql, conn, params=[day_key])
-                conn.close()
-
-                if df.empty:
-                    msg = f"No data for {dt.strftime('%Y-%m-%d')}"
-                    print(msg)
-                    return [], f"### {msg}"
-
-                # Normalize and aggregate
-                df['emotion_norm'] = df['emotion'].astype(str).map(lambda x: EMOTION_LABEL_MAP_ZH2EN.get(x, x))
-                counts = df.groupby('emotion_norm').size().reset_index(name='count')
-                total = int(counts['count'].sum())
-                counts['ratio'] = counts['count'] / total
-                counts['weight'] = counts['emotion_norm'].map(lambda e: EMOTION_WEIGHT.get(e, 0))
-                counts['contrib'] = counts['ratio'] * counts['weight']
-                impact_avg = float(counts['contrib'].sum())
-
-                # Compute n_bins and downV from global params
-                n_bins = int(((pd.to_datetime(timeE, format='%H:%M') - pd.to_datetime(timeS, format='%H:%M'))
-                              / pd.Timedelta(minutes=timeP)))
-                n_bins = max(n_bins, 1)
-                downV_local = (startV - endV) / n_bins
-                delta = impact_avg - downV_local
-
-                # Predict average with clipping as monthly approximation does
-                def avg_for_day_local(impact_val: float) -> float:
-                    dlt = impact_val - downV_local
-                    values = []
-                    for i in range(1, n_bins + 1):
-                        cur = startV + i * dlt
-                        cur = 20 if cur < 20 else (100 if cur > 100 else cur)
-                        values.append(cur)
-                    return float(pd.Series(values).mean())
-
-                predicted_avg = avg_for_day_local(impact_avg)
-
-                # Prepare table rows
-                table_rows = []
-                for _, r in counts.sort_values('emotion_norm').iterrows():
-                    table_rows.append([
-                        str(r['emotion_norm']),
-                        int(r['count']),
-                        round(float(r['ratio']), 4),
-                        float(r['weight']),
-                        round(float(r['contrib']), 4)
-                    ])
-
-                # Summary markdown
-                summary_md = (
-                    f"### Aggregation for {dt.strftime('%Y-%m-%d')}\n"
-                    f"- Total records: {total}\n"
-                    f"- impact_avg: {impact_avg:.4f}\n"
-                    f"- n_bins: {n_bins}, downV: {downV_local:.4f}, delta: {delta:.4f}\n"
-                    f"- Predicted daily average battery: {predicted_avg:.1f}\n"
-                )
-
-                # Also print to console as requested
-                print(summary_md)
-                print("Per-emotion details:")
-                print(counts[['emotion_norm','count','ratio','weight','contrib']])
-
-                return table_rows, summary_md
-            except Exception as e:
-                err = f"Error: {e}"
-                print(err)
-                return [], f"### {err}"
-
-        debug_btn.click(
-            fn=show_day_aggregation_details,
-            inputs=[debug_day_input],
-            outputs=[debug_table, debug_summary]
-        )
+        # Debug section removed as requested
         
     return interface
 

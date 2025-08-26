@@ -115,7 +115,7 @@ def create_main_interface():
                 fn=lambda: "Data visualization module failed to load",
                 inputs=None,
                 outputs="text",
-                title="Data Visualization",
+                title="data_traceback",
                 description="Module failed to load, please check code"
             )
     else:
@@ -123,7 +123,7 @@ def create_main_interface():
             fn=lambda: "Data visualization module not installed",
             inputs=None,
             outputs="text",
-            title="Data Visualization",
+            title="data_traceback",
             description="Please install required dependencies"
         )
     
@@ -190,8 +190,57 @@ def create_main_interface():
             description="Please install required dependencies"
         )
     
+    # Custom CSS for larger fonts and 3D-like tabs (use Blocks css argument for reliability)
+    custom_css = """
+/* Base font scaling */
+.gradio-container { font-size: 16px; }
+.prose h1 { font-size: 2.0rem !important; }
+.prose h2 { font-size: 1.6rem !important; }
+.prose h3 { font-size: 1.3rem !important; }
+
+/* Tabs bar spacing and equal widths */
+[role="tablist"] {
+  display: flex;
+  gap: 8px;
+}
+
+/* Each tab takes equal width */
+[role="tab"] {
+  flex: 1 1 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.06rem;
+  font-weight: 700;
+  background: linear-gradient(180deg, #ffffff, #f6f6f8);
+  border: 1px solid #d8d8de;
+  border-bottom: 2px solid #c8c8cf;
+  border-radius: 4px 4px 0 0; /* less round */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 8px 14px;
+}
+
+/* Active tab */
+[role="tab"][aria-selected="true"] {
+  background: linear-gradient(180deg, #ffffff, #eef1ff);
+  border-color: #b9c1ff;
+  border-bottom-color: #8d9aff;
+  box-shadow: 0 2px 6px rgba(64,88,255,0.12);
+}
+
+/* Tab panel depth (subtle, less rounded) */
+[role="tabpanel"] {
+  border: 1px solid #e6e6ec;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  padding: 14px;
+  background: #fff;
+}
+"""
+
     # Create main interface with multiple tabs
-    with gr.Blocks(title="Lenovo Emotion AI", theme=gr.themes.Soft()) as main_interface:
+    with gr.Blocks(title="Lenovo Emotion AI", theme=gr.themes.Soft(), css=custom_css) as main_interface:
         gr.Markdown("# 🚀 Lenovo Emotion AI")
         gr.Markdown("This is a Python application integrating multiple functions, each tab corresponding to different functional modules.")
         
@@ -202,7 +251,7 @@ def create_main_interface():
             with gr.TabItem("📡 Realtime Emotion", id=1):
                 realtime_emotion_tab.render()
             
-            with gr.TabItem("📊 Data Visualization", id=2):
+            with gr.TabItem("📊 Data Tracing", id=2):
                 data_tab.render()
             
             with gr.TabItem("🖼️ Image Processing", id=3):
@@ -219,7 +268,7 @@ def create_main_interface():
         gr.Markdown("""
         - `Emotion Battery` - Emotion battery module
         - `Realtime Emotion` - Real-time emotion module
-        - `data_analysis/` - Data analysis and visualization module
+        - `data_analysis/` - Data Tracing module
         - `image_processing/` - Image processing module
         - `audio_processing/` - Audio processing module
         - `text_analysis/` - Text analysis module
