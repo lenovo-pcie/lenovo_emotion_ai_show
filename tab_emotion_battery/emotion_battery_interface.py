@@ -481,9 +481,14 @@ def create_emotion_battery_interface():
                 battery_display = gr.HTML(value=render_battery_html(battery_level, status_text, status_color, status_emoji), label="Battery")
                 
                 # Update button
-                update_btn = gr.Button("🔄 Refresh Battery Level", variant="primary")
-                
-            with gr.Column(scale=2):
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        update_btn = gr.Button("🔄 Refresh Battery Level", variant="primary")
+                    with gr.Column(scale=2):
+                        gr.HTML("", visible=True)
+        
+        with gr.Row():        
+            with gr.Column(scale=1):
                 # Battery chart
                 chart_output = gr.Plot(
                     value=create_today_battery_chart(),
@@ -497,7 +502,7 @@ def create_emotion_battery_interface():
         gr.Markdown("Analyze emotion battery for any specific day with detailed 10-minute breakdown.")
         
         with gr.Row():
-            with gr.Column(scale=2):
+            with gr.Column(scale=1):
                 # Date input
                 date_input = gr.Textbox(
                     label="Date (YYYY-MM-DD or YYYYMMDD)",
@@ -514,13 +519,8 @@ def create_emotion_battery_interface():
                 # Analysis button
                 analyze_btn = gr.Button("🔍 Analyze Selected Day", variant="primary")
                 
-            with gr.Column(scale=1):
-                # Status info
-                gr.Markdown("### 📋 Analysis Options")
-                gr.Markdown("- **Date Selection**: Choose any date to analyze")
-                gr.Markdown("- **Database**: Switch between real and test data")
-                gr.Markdown("- **10-min Intervals**: Detailed time breakdown")
-                gr.Markdown("- **Impact Analysis**: See emotional influences")
+            with gr.Column(scale=2):
+                gr.HTML("", visible=True)
         
         # Single day chart output
         single_day_chart = gr.Plot(
@@ -529,13 +529,6 @@ def create_emotion_battery_interface():
         )
         
         gr.Markdown("---")
-        gr.Markdown("### 📋 Chart Features")
-        gr.Markdown("- **Real-time Data**: Shows your emotion battery level throughout the day")
-        gr.Markdown("- **10-Minute Intervals**: Detailed breakdown by time periods")
-        gr.Markdown("- **Interactive**: Hover over bars to see impact details")
-        gr.Markdown("- **Current Status**: Displays your current battery level")
-        gr.Markdown("- **Historical Analysis**: Analyze any specific day")
-        gr.Markdown("- **Auto-update**: Click refresh to get latest data")
         
         # Event handlers
         def update_battery():
