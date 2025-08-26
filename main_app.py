@@ -199,7 +199,7 @@ def create_main_interface():
             with gr.TabItem("🔋 Emotion Battery", id=0):
                 emotion_battery_tab.render()
             
-            with gr.TabItem("📡 Realtime Emotion", id=1):
+            with gr.TabItem("📡 实时情绪预览", id=1):
                 realtime_emotion_tab.render()
             
             with gr.TabItem("📊 Data Visualization", id=2):
@@ -214,16 +214,16 @@ def create_main_interface():
             with gr.TabItem("📝 Text Analysis", id=5):
                 text_tab.render()
         
-        gr.Markdown("---")
-        gr.Markdown("### 📁 Project Structure")
-        gr.Markdown("""
-        - `Emotion Battery` - Emotion battery module
-        - `Realtime Emotion` - Real-time emotion module
-        - `data_analysis/` - Data analysis and visualization module
-        - `image_processing/` - Image processing module
-        - `audio_processing/` - Audio processing module
-        - `text_analysis/` - Text analysis module
-        """)
+        # gr.Markdown("---")
+        # gr.Markdown("### 📁 Project Structure")
+        # gr.Markdown("""
+        # - `Emotion Battery` - Emotion battery module
+        # - `Realtime Emotion` - Real-time emotion module
+        # - `data_analysis/` - Data analysis and visualization module
+        # - `image_processing/` - Image processing module
+        # - `audio_processing/` - Audio processing module
+        # - `text_analysis/` - Text analysis module
+        # """)
         
     
     return main_interface
