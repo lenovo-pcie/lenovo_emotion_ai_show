@@ -5,10 +5,10 @@ import sys
 # Add subdirectories to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_emotion_battery'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_realtime_emotion'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_data_analysis'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_data_visualization'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_image_processing'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_audio_processing'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_text_analysis'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tab_emotion_review'))
 
 # Import submodules
 emotion_battery_available = False
@@ -16,7 +16,7 @@ realtime_emotion_available = False
 data_visualization_available = False
 image_editor_available = False
 audio_processor_available = False
-text_processor_available = False
+emotion_review_available = False
 
 try:
     from emotion_battery_interface import create_emotion_battery_interface
@@ -54,11 +54,11 @@ except ImportError as e:
     print(f"❌ Failed to import audio processing module: {e}")
 
 try:
-    from text_processor import create_text_processor_interface
-    text_processor_available = True
-    print("✅ Text analysis module imported successfully")
+    from emotion_review_interface import create_emotion_review_interface
+    emotion_review_available = True
+    print("✅ Emotion review module imported successfully")
 except ImportError as e:
-    print(f"❌ Failed to import text analysis module: {e}")
+    print(f"❌ Failed to import emotion review module: {e}")
 
 def create_main_interface():
     """Create main interface with multiple tabs"""
@@ -169,24 +169,24 @@ def create_main_interface():
             description="Please install required dependencies"
         )
     
-    if text_processor_available:
+    if emotion_review_available:
         try:
-            text_tab = create_text_processor_interface()
+            emotion_review_tab = create_emotion_review_interface()
         except Exception as e:
-            print(f"Error creating text analysis interface: {e}")
-            text_tab = gr.Interface(
-                fn=lambda: "Text analysis module failed to load",
+            print(f"Error creating emotion review interface: {e}")
+            emotion_review_tab = gr.Interface(
+                fn=lambda: "Emotion review module failed to load",
                 inputs=None,
                 outputs="text",
-                title="Text Analysis",
+                title="Emotion Review",
                 description="Module failed to load, please check code"
             )
     else:
-        text_tab = gr.Interface(
-            fn=lambda: "Text analysis module not installed",
+        emotion_review_tab = gr.Interface(
+            fn=lambda: "Emotion review module not installed",
             inputs=None,
             outputs="text",
-            title="Text Analysis",
+            title="Emotion Review",
             description="Please install required dependencies"
         )
     
@@ -251,27 +251,27 @@ def create_main_interface():
             with gr.TabItem("📡 Realtime Emotion", id=1):
                 realtime_emotion_tab.render()
             
-            with gr.TabItem("📊 Data Tracing", id=2):
+            with gr.TabItem("📊 Data Visualization", id=2):
                 data_tab.render()
             
-            with gr.TabItem("🖼️ Image Processing", id=3):
+            with gr.TabItem("📋 Emotion Review", id=3):
+                emotion_review_tab.render()
+            
+            with gr.TabItem("🖼️ Image Processing", id=4):
                 image_tab.render()
             
-            with gr.TabItem("🎵 Audio Processing", id=4):
+            with gr.TabItem("🎵 Audio Processing", id=5):
                 audio_tab.render()
-            
-            with gr.TabItem("📝 Text Analysis", id=5):
-                text_tab.render()
         
         gr.Markdown("---")
         gr.Markdown("### 📁 Project Structure")
         gr.Markdown("""
         - `Emotion Battery` - Emotion battery module
         - `Realtime Emotion` - Real-time emotion module
-        - `data_analysis/` - Data Tracing module
+        - `data_visualization/` - Data Tracing module
         - `image_processing/` - Image processing module
         - `audio_processing/` - Audio processing module
-        - `text_analysis/` - Text analysis module
+        - `emotion_review/` - Emotion review module
         """)
         
     

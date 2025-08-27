@@ -9,7 +9,7 @@ LenovoEmotion/
 ├── main_app.py              # Main application file
 ├── requirements.txt          # Project dependencies
 ├── README.md                # Project documentation
-├── data_analysis/           # Data analysis module
+├── data_visualization/           # Data visualization module
 │   └── data_visualization.py
 ├── image_processing/        # Image processing module
 │   └── image_editor.py
@@ -33,7 +33,7 @@ LenovoEmotion/
 - You can add real-time emotion analysis functionality here
 - Examples: real-time emotion recognition, emotion change tracking, emotion alerts, etc.
 
-### 📊 Data Visualization Module (`data_analysis/`)
+### 📊 Data Visualization Module (`data_visualization/`)
 - Contains `data_visualization.py` file
 - Currently only displays "Hello World!" framework
 - You can add data analysis and visualization functionality here
